@@ -1,11 +1,22 @@
 import json
 import os
+import random
+import asyncio
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN = TOKEN = "8653103518:AAHs8a4Qeg4JSDeZ_fDAPk8du5V99nBykVQ"
+TOKEN = "8653103518:AAHs8a4Qeg4JSDeZ_fDAPk8du5V99nBykVQ"  # <-- вставь сюда токен от BotFather
 
 DATA_FILE = "players.json"
+
+# Ивент "Золотая какашка"
+GOLDEN_POOP_EVENT = {
+    "active": False,
+    "end_time": None,
+    "multiplier": 3,
+    "duration_minutes": 5
+}
 
 CLICK_UPGRADES = [
     {"id": "c1", "icon": "💨", "name": "Газовая атака",   "desc": "+2 за клик",   "cost": 15,    "val": 2,   "type": "click"},
@@ -41,7 +52,7 @@ def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {}
+    return {"players": {}, "active_users": {}, "last_event_check": None}
 
 
 def save_data(data):
@@ -49,10 +60,12 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def get_player(data, uid):
+def get_player(data, uid, username=None):
     uid = str(uid)
-    if uid not in data:
-        data[uid] = {
+    if "players" not in data:
+        data["players"] = {}
+    if uid not in data["players"]:
+        data["players"][uid] = {
             "score": 0,
             "total": 0,
             "click_base": 1,
@@ -64,8 +77,87 @@ def get_player(data, uid):
             "prestige_mult": 1,
             "upg_costs": {},
             "bought": {},
+            "username": username or "Unknown",
         }
-    return data[uid]
+    # Обновляем username если изменился
+    if username and data["players"][uid].get("username") != username:
+        data["players"][uid]["username"] = username
+    return data["players"][uid]
+
+
+def update_active_user(data, uid, username):
+    """Обновляет активность пользователя и возвращает список активных пользователей"""
+    if "active_users" not in data:
+        data["active_users"] = {}
+    
+    now = datetime.now().isoformat()
+    data["active_users"][str(uid)] = {
+        "username": username or "Unknown",
+        "last_active": now
+    }
+    
+    # Очищаем неактивных (не активны более 5 минут)
+    active_list = []
+    for user_id, info in list(data["active_users"].items()):
+        last_active = datetime.fromisoformat(info["last_active"])
+        if datetime.now() - last_active > timedelta(minutes=5):
+            del data["active_users"][user_id]
+        else:
+            active_list.append(info["username"])
+    
+    return active_list
+
+
+def get_active_users_text(data):
+    """Возвращает текст с активными пользователями"""
+    if "active_users" not in data or len(data["active_users"]) < 2:
+        return ""
+    
+    usernames = [info["username"] for info in data["active_users"].values()]
+    if len(usernames) >= 2:
+        return f"\n\n👥 Онлайн ({len(usernames)}): {', '.join(usernames)}"
+    return ""
+
+
+def check_golden_event():
+    """Проверяет и обновляет статус ивента Золотая какашка"""
+    global GOLDEN_POOP_EVENT
+    
+    if GOLDEN_POOP_EVENT["active"]:
+        # Проверяем не закончился ли ивент
+        if datetime.now() >= GOLDEN_POOP_EVENT["end_time"]:
+            GOLDEN_POOP_EVENT["active"] = False
+            GOLDEN_POOP_EVENT["end_time"] = None
+            return False, "ended"
+        return True, "active"
+    return False, "inactive"
+
+
+def start_golden_event():
+    """Запускает ивент Золотая какашка"""
+    global GOLDEN_POOP_EVENT
+    GOLDEN_POOP_EVENT["active"] = True
+    GOLDEN_POOP_EVENT["end_time"] = datetime.now() + timedelta(minutes=GOLDEN_POOP_EVENT["duration_minutes"])
+    return GOLDEN_POOP_EVENT["end_time"]
+
+
+def get_event_status_text():
+    """Возвращает текст статуса ивента"""
+    is_active, status = check_golden_event()
+    if is_active:
+        remaining = GOLDEN_POOP_EVENT["end_time"] - datetime.now()
+        minutes = int(remaining.total_seconds() // 60)
+        seconds = int(remaining.total_seconds() % 60)
+        return f"\n\n🌟 ЗОЛОТАЯ КАКАШКА! x{GOLDEN_POOP_EVENT['multiplier']} фарма!\n⏰ Осталось: {minutes}м {seconds}с"
+    return ""
+
+
+def get_event_multiplier():
+    """Возвращает множитель ивента"""
+    is_active, _ = check_golden_event()
+    if is_active:
+        return GOLDEN_POOP_EVENT["multiplier"]
+    return 1
 
 
 def upg_cost(p, uid):
@@ -76,11 +168,13 @@ def upg_cost(p, uid):
 
 
 def click_power(p):
-    return max(1, round(p["click_base"] * p["mult_click"] * p["mult_all"] * p["prestige_mult"]))
+    base = max(1, round(p["click_base"] * p["mult_click"] * p["mult_all"] * p["prestige_mult"]))
+    return base * get_event_multiplier()
 
 
 def auto_power(p):
-    return p["auto_base"] * p["mult_auto"] * p["mult_all"] * p["prestige_mult"]
+    base = p["auto_base"] * p["mult_auto"] * p["mult_all"] * p["prestige_mult"]
+    return base * get_event_multiplier()
 
 
 def fmt(n):
@@ -114,7 +208,7 @@ def make_main_keyboard(p):
     return InlineKeyboardMarkup(rows)
 
 
-def make_game_text(p):
+def make_game_text(p, data):
     lines = [
         "💩 *Какашка Кликер*",
         "",
@@ -125,7 +219,13 @@ def make_game_text(p):
     ]
     if p["prestige"] > 0:
         lines.append(f"✨ Престиж: *{p['prestige']}* (x{p['prestige_mult']})")
-    return "\n".join(lines)
+    
+    text = "\n".join(lines)
+    # Добавляем статус ивента
+    text += get_event_status_text()
+    # Добавляем активных пользователей
+    text += get_active_users_text(data)
+    return text
 
 
 def make_upgrades_keyboard(p, category):
@@ -168,10 +268,14 @@ def make_upgrades_text(p, category):
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     data = load_data()
-    p = get_player(data, update.effective_user.id)
+    uid = update.effective_user.id
+    username = update.effective_user.username or update.effective_user.first_name
+    p = get_player(data, uid, username)
+    # Обновляем активность
+    update_active_user(data, uid, username)
     save_data(data)
     await update.message.reply_text(
-        make_game_text(p),
+        make_game_text(p, data),
         parse_mode="Markdown",
         reply_markup=make_main_keyboard(p),
     )
@@ -181,17 +285,26 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     uid = str(query.from_user.id)
+    username = query.from_user.username or query.from_user.first_name
     data = load_data()
-    p = get_player(data, uid)
+    p = get_player(data, uid, username)
     cb = query.data
+
+    # Обновляем активность при каждом действии
+    active_users = update_active_user(data, uid, username)
 
     if cb == "click":
         earned = click_power(p)
         p["score"] += earned
         p["total"] += earned
         save_data(data)
+        
+        # Проверяем активен ли ивент для бонусного сообщения
+        is_event, _ = check_golden_event()
+        bonus_text = " 🌟 x3 ИВЕНТ!" if is_event else ""
+        
         await query.edit_message_text(
-            make_game_text(p) + f"\n\n💥 +{fmt(earned)} какашек!",
+            make_game_text(p, data) + f"\n\n💥 +{fmt(earned)} какашек!{bonus_text}",
             parse_mode="Markdown",
             reply_markup=make_main_keyboard(p),
         )
@@ -199,7 +312,7 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     elif cb == "menu_main":
         save_data(data)
         await query.edit_message_text(
-            make_game_text(p),
+            make_game_text(p, data),
             parse_mode="Markdown",
             reply_markup=make_main_keyboard(p),
         )
@@ -240,6 +353,10 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"⚡ Множ. всё: x{p['mult_all']:.1f}",
             f"✨ Престиж: {p['prestige']} (x{p['prestige_mult']})",
         ]
+        # Добавляем онлайн в статистику
+        if len(active_users) >= 2:
+            lines.append(f"\n👥 Онлайн: {', '.join(active_users)}")
+        
         kb = InlineKeyboardMarkup([[InlineKeyboardButton("← Назад", callback_data="menu_main")]])
         await query.edit_message_text("\n".join(lines), parse_mode="Markdown", reply_markup=kb)
 
@@ -319,10 +436,40 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def event_scheduler(context: ContextTypes.DEFAULT_TYPE):
+    """Фоновая задача для запуска ивентов каждые 10 минут"""
+    while True:
+        await asyncio.sleep(600)  # 10 минут
+        
+        # Запускаем ивент с шансом 30%
+        if random.random() < 0.3:
+            end_time = start_golden_event()
+            print(f"🌟 Золотая какашка началась! До {end_time}")
+            
+            # Отправляем уведомление всем активным пользователям
+            data = load_data()
+            if "active_users" in data:
+                for uid in data["active_users"]:
+                    try:
+                        await context.bot.send_message(
+                            chat_id=int(uid),
+                            text="🌟 *ЗОЛОТАЯ КАКАШКА НАЧАЛАСЬ!*\n\n"
+                                 "x3 фарм на 5 минут!\n"
+                                 "Быстрее кликай!",
+                            parse_mode="Markdown"
+                        )
+                    except Exception as e:
+                        print(f"Не удалось отправить уведомление {uid}: {e}")
+
+
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
+    
+    # Запускаем планировщик ивентов
+    app.job_queue.run_repeating(event_scheduler, interval=600, first=600)
+    
     print("Бот запущен! Нажми Ctrl+C для остановки.")
     app.run_polling()
 
