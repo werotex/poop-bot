@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN = "8653103518:AAHs8a4Qeg4JSDeZ_fDAPk8du5V99nBykVQ"  # <-- вставь сюда токен от BotFather
+TOKEN = "8653103518:AAHs8a4Qeg4JSDeZ_fDAPk8du5V99nBykVQ"
 
 DATA_FILE = "players.json"
 
