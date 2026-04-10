@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN = "8653103518:AAHs8a4Qeg4JSDeZ_fDAPk8du5V99nBykVQ"
+TOKEN = TOKEN = "8653103518:AAH58a4Qeg4J5DeZ_fDAPk8duSV99nBykVQ"
 
 DATA_FILE = "players.json"
 
