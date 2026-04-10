@@ -1,5 +1,4 @@
-
-optimized_code = '''import json
+import json
 import os
 import random
 import asyncio
@@ -14,7 +13,7 @@ DATA_FILE = "players.json"
 # Кэш данных в памяти
 data_cache = None
 last_save = None
-SAVE_INTERVAL = 5  # Сохраняем на диск каждые 5 секунд минимум
+SAVE_INTERVAL = 5
 
 # Ивент "Золотая какашка"
 GOLDEN_POOP_EVENT = {
@@ -55,7 +54,6 @@ ALL_UPGRADES = {u["id"]: u for u in CLICK_UPGRADES + AUTO_UPGRADES + MULT_UPGRAD
 
 
 def load_data():
-    """Загружает данные с диска только если кэш пуст"""
     global data_cache
     if data_cache is not None:
         return data_cache
@@ -73,15 +71,13 @@ def load_data():
 
 
 def save_data(force=False):
-    """Сохраняет данные на диск с задержкой"""
     global data_cache, last_save
-    
     if data_cache is None:
         return
     
     now = datetime.now()
     if not force and last_save and (now - last_save).seconds < SAVE_INTERVAL:
-        return  # Пропускаем частые сохранения
+        return
     
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -92,7 +88,6 @@ def save_data(force=False):
 
 
 def get_player(uid, username=None):
-    """Получает игрока из кэша"""
     data = load_data()
     uid = str(uid)
     
@@ -122,7 +117,6 @@ def get_player(uid, username=None):
 
 
 def update_active_user(uid, username):
-    """Обновляет активность пользователя"""
     data = load_data()
     if "active_users" not in data:
         data["active_users"] = {}
@@ -133,7 +127,6 @@ def update_active_user(uid, username):
         "last_active": now
     }
     
-    # Очищаем неактивных
     active_list = []
     for user_id, info in list(data["active_users"].items()):
         last_active = datetime.fromisoformat(info["last_active"])
@@ -146,19 +139,17 @@ def update_active_user(uid, username):
 
 
 def get_active_users_text():
-    """Возвращает текст с активными пользователями"""
     data = load_data()
     if "active_users" not in data or len(data["active_users"]) < 2:
         return ""
     
     usernames = [info["username"] for info in data["active_users"].values()]
     if len(usernames) >= 2:
-        return f"\\n\\n👥 Онлайн ({len(usernames)}): {', '.join(usernames)}"
+        return f"\n\n👥 Онлайн ({len(usernames)}): {', '.join(usernames)}"
     return ""
 
 
 def check_golden_event():
-    """Проверяет статус ивента"""
     global GOLDEN_POOP_EVENT
     
     if GOLDEN_POOP_EVENT["active"]:
@@ -171,7 +162,6 @@ def check_golden_event():
 
 
 def start_golden_event():
-    """Запускает ивент"""
     global GOLDEN_POOP_EVENT
     GOLDEN_POOP_EVENT["active"] = True
     GOLDEN_POOP_EVENT["end_time"] = datetime.now() + timedelta(minutes=GOLDEN_POOP_EVENT["duration_minutes"])
@@ -179,18 +169,16 @@ def start_golden_event():
 
 
 def get_event_status_text():
-    """Возвращает текст статуса ивента"""
     is_active, status = check_golden_event()
     if is_active:
         remaining = GOLDEN_POOP_EVENT["end_time"] - datetime.now()
         minutes = int(remaining.total_seconds() // 60)
         seconds = int(remaining.total_seconds() % 60)
-        return f"\\n\\n🌟 ЗОЛОТАЯ КАКАШКА! x{GOLDEN_POOP_EVENT['multiplier']} фарма!\\n⏰ Осталось: {minutes}м {seconds}с"
+        return f"\n\n🌟 ЗОЛОТАЯ КАКАШКА! x{GOLDEN_POOP_EVENT['multiplier']} фарма!\n⏰ Осталось: {minutes}м {seconds}с"
     return ""
 
 
 def get_event_multiplier():
-    """Возвращает множитель ивента"""
     is_active, _ = check_golden_event()
     return GOLDEN_POOP_EVENT["multiplier"] if is_active else 1
 
@@ -255,7 +243,7 @@ def make_game_text(p):
     if p["prestige"] > 0:
         lines.append(f"✨ Престиж: *{p['prestige']}* (x{p['prestige_mult']})")
     
-    text = "\\n".join(lines)
+    text = "\n".join(lines)
     text += get_event_status_text()
     text += get_active_users_text()
     return text
@@ -296,7 +284,7 @@ def make_upgrades_text(p, category):
         cnt_str = f" (куплено: {cnt})" if cnt else ""
         lines.append(f"{status} {u['icon']} *{u['name']}* — {u['desc']}{cnt_str}")
         lines.append(f"   Цена: {fmt(cost)} 💩")
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -331,7 +319,7 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         bonus_text = " 🌟 x3 ИВЕНТ!" if is_event else ""
         
         await query.edit_message_text(
-            make_game_text(p) + f"\\n\\n💥 +{fmt(earned)} какашек!{bonus_text}",
+            make_game_text(p) + f"\n\n💥 +{fmt(earned)} какашек!{bonus_text}",
             parse_mode="Markdown",
             reply_markup=make_main_keyboard(p),
         )
@@ -380,10 +368,10 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"✨ Престиж: {p['prestige']} (x{p['prestige_mult']})",
         ]
         if len(active_users) >= 2:
-            lines.append(f"\\n👥 Онлайн: {', '.join(active_users)}")
+            lines.append(f"\n👥 Онлайн: {', '.join(active_users)}")
         
         kb = InlineKeyboardMarkup([[InlineKeyboardButton("← Назад", callback_data="menu_main")]])
-        await query.edit_message_text("\\n".join(lines), parse_mode="Markdown", reply_markup=kb)
+        await query.edit_message_text("\n".join(lines), parse_mode="Markdown", reply_markup=kb)
 
     elif cb == "menu_prestige":
         cost = prestige_cost(p)
@@ -403,7 +391,7 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             btns.append(InlineKeyboardButton("✨ Подтвердить престиж!", callback_data="do_prestige"))
         btns_row = [InlineKeyboardButton("← Назад", callback_data="menu_main")]
         kb = InlineKeyboardMarkup([btns, btns_row] if btns else [btns_row])
-        await query.edit_message_text("\\n".join(lines), parse_mode="Markdown", reply_markup=kb)
+        await query.edit_message_text("\n".join(lines), parse_mode="Markdown", reply_markup=kb)
 
     elif cb == "do_prestige":
         cost = prestige_cost(p)
@@ -420,7 +408,7 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             p["upg_costs"] = {}
             p["bought"] = {}
             await query.edit_message_text(
-                f"✨ *Престиж {p['prestige']} активирован!*\\n\\nМножитель: x{p['prestige_mult']}\\n\\nНачинаем заново...",
+                f"✨ *Престиж {p['prestige']} активирован!*\n\nМножитель: x{p['prestige_mult']}\n\nНачинаем заново...",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Играть!", callback_data="menu_main")]]),
             )
@@ -459,29 +447,24 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def auto_save_task():
-    """Фоновая задача автосохранения"""
     while True:
-        await asyncio.sleep(10)  # Сохраняем каждые 10 секунд
+        await asyncio.sleep(10)
         save_data()
 
 
 async def event_task(context: ContextTypes.DEFAULT_TYPE):
-    """Фоновая задача ивентов каждые 10 минут"""
     while True:
-        await asyncio.sleep(600)  # 10 минут
-        
-        if random.random() < 0.3:  # 30% шанс
+        await asyncio.sleep(600)
+        if random.random() < 0.3:
             end_time = start_golden_event()
             print(f"🌟 Золотая какашка! До: {end_time}")
-            
-            # Уведомляем всех активных
             data = load_data()
             if "active_users" in data:
                 for uid in data["active_users"]:
                     try:
                         await context.bot.send_message(
                             chat_id=int(uid),
-                            text="🌟 *ЗОЛОТАЯ КАКАШКА НАЧАЛАСЬ!*\\n\\nx3 фарм на 5 минут!",
+                            text="🌟 *ЗОЛОТАЯ КАКАШКА НАЧАЛАСЬ!*\n\nx3 фарм на 5 минут!",
                             parse_mode="Markdown"
                         )
                     except:
@@ -493,7 +476,6 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
     
-    # Запускаем фоновые задачи
     asyncio.create_task(auto_save_task())
     
     print("Бот запущен! 🚀")
@@ -502,12 +484,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-
-print("Оптимизированный код готов!")
-print("\n🔧 Основные изменения:")
-print("1. Кэширование данных в памяти (не читаем файл каждый раз)")
-print("2. Автосохранение каждые 10 секунд вместо каждого действия")
-print("3. Убраны лишние вызовы save_data()")
-print("4. Упрощены функции, убраны лишние параметры")
-print("5. drop_pending_updates=True - игнорирует старые сообщения при перезапуске")
