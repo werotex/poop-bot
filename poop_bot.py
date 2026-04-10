@@ -3,7 +3,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN = os.environ.get("8653103518:AAHs8a4Qeg4JSDeZ_fDAPk8du5V99nBykVQ")  # <-- вставь сюда токен от BotFather
+TOKEN = TOKEN = "8653103518:AAH58a4Qeg4J5DeZ_fDAPk8duSV99nBykVQ"  # <-- вставь сюда токен от BotFather
 
 DATA_FILE = "players.json"
 
