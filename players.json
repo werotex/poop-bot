@@ -1,0 +1,87 @@
+{
+  "8186654075": {
+    "score": 113,
+    "total": 208,
+    "click_base": 8,
+    "auto_base": 0,
+    "mult_click": 1.0,
+    "mult_auto": 1.0,
+    "mult_all": 1.0,
+    "prestige": 0,
+    "prestige_mult": 1,
+    "upg_costs": {
+      "c1": 42,
+      "c2": 224
+    },
+    "bought": {
+      "c1": 1,
+      "c2": 1
+    }
+  },
+  "6051929145": {
+    "score": 1468,
+    "total": 1833,
+    "click_base": 18,
+    "auto_base": 0,
+    "mult_click": 1.0,
+    "mult_auto": 1.0,
+    "mult_all": 1.0,
+    "prestige": 0,
+    "prestige_mult": 1,
+    "upg_costs": {
+      "c1": 42,
+      "c3": 980
+    },
+    "bought": {
+      "c1": 1,
+      "c3": 1
+    }
+  },
+  "5881997188": {
+    "score": 70,
+    "total": 85,
+    "click_base": 3,
+    "auto_base": 0,
+    "mult_click": 1.0,
+    "mult_auto": 1.0,
+    "mult_all": 1.0,
+    "prestige": 0,
+    "prestige_mult": 1,
+    "upg_costs": {
+      "c1": 42
+    },
+    "bought": {
+      "c1": 1
+    }
+  },
+  "1465362509": {
+    "score": 24,
+    "total": 39,
+    "click_base": 3,
+    "auto_base": 0,
+    "mult_click": 1.0,
+    "mult_auto": 1.0,
+    "mult_all": 1.0,
+    "prestige": 0,
+    "prestige_mult": 1,
+    "upg_costs": {
+      "c1": 42
+    },
+    "bought": {
+      "c1": 1
+    }
+  },
+  "5762987186": {
+    "score": 7,
+    "total": 7,
+    "click_base": 1,
+    "auto_base": 0,
+    "mult_click": 1.0,
+    "mult_auto": 1.0,
+    "mult_all": 1.0,
+    "prestige": 0,
+    "prestige_mult": 1,
+    "upg_costs": {},
+    "bought": {}
+  }
+}
