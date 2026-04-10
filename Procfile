@@ -1,1 +1,1 @@
-worker: python poop_bot.py
+web: python poop_bot.py
