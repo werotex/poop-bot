@@ -2,7 +2,7 @@
 nixPkgs = ["python3", "python3Packages.pip"]
 
 [phases.install]
-cmds = ["pip3 install -r requirements.txt --break-system-packages"]
+cmds = ["pip3 install python-telegram-bot APScheduler --break-system-packages"]
 
 [start]
 cmd = "python3 poop_bot.py"
